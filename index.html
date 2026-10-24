@@ -288,6 +288,11 @@ button:focus-visible, input[type=checkbox]:focus-visible{
 @media (prefers-reduced-motion: reduce){
   .relleno{transition:none}
 }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .lectura{color:#8fc3e8}
+}
+.campo input:disabled{opacity:.5;cursor:not-allowed}
+#btn-circular:disabled{opacity:.8}
 </style>
 </head>
 <body>
@@ -318,7 +323,7 @@ button:focus-visible, input[type=checkbox]:focus-visible{
       </div>
       <div class="campo">
         <label for="in-v0">Velocidad lanz. (v₀) — km/s</label>
-        <input id="in-v0" type="number" step="0.01" value="7.90">
+        <input id="in-v0" type="number" step="0.01" value="7.97">
       </div>
       <div class="campo">
         <label for="in-obj">Órbita objetivo — km sobre superficie</label>
@@ -639,7 +644,7 @@ function dibujarGraficas(){
   dibujarSerie($('g-rt'), app.serieRT, '#3d7fb0',
     { x:'t', xU:'s',  y:'r', yU:'km',   xDec:0, yDec:0 });
   dibujarSerie($('g-vr'), app.serieVR, '#d98a80',
-    { x:'r', xU:'km', y:'v', yU:'km/s', xDec:0, yDec:2 });
+    { x:'r', xU:'km', y:'v', yU:'km/s', xDec:0, yDec:3 });
 }
 
 /* ============================================================
