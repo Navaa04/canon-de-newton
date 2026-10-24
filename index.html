@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Consola de Lanzamiento Orbital</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --navy:#12395b;
+  --navy-dark:#0d2b45;
+  --panel:#ffffff;
+  --page:#eef1f5;
+  --ink:#1b2733;
+  --ink-soft:#5a6b7c;
+  --line:#c9d4de;
+  --scope:#14243a;
+  --scope-line:#2c4a68;
+  --planet:#4e88af;
+  --trace:#8fd0ef;
+  --target:#3fa05e;
+  --amber-bg:#fffbea;
+  --amber-line:#d9b23c;
+  --amber-ink:#8a6a10;
+  --c-impacto:#d04a3b;
+  --c-eliptica:#e8b33c;
+  --c-circular:#3fa05e;
+  --c-escape:#5c7fa0;
+  --radius:4px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;
+  background:var(--page);
+  color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  font-size:14px;
+  line-height:1.45;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0a1420; --panel:#132132; --ink:#e6edf4; --ink-soft:#9fb1c3;
+    --line:#2b3d51; --amber-bg:#2a2313; --amber-line:#8f7620; --amber-ink:#e2c268;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0a1420; --panel:#132132; --ink:#e6edf4; --ink-soft:#9fb1c3;
+  --line:#2b3d51; --amber-bg:#2a2313; --amber-line:#8f7620; --amber-ink:#e2c268;
+}
+
+/* ============================================================
+   ESTRUCTURA
+   ============================================================ */
+.consola{
+  max-width:1280px;
+  margin:18px auto;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.barra-titulo{
+  background:var(--navy);
+  color:#fff;
+  padding:12px 18px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.barra-titulo h1{
+  font-size:17px;
+  font-weight:600;
+  margin:0;
+  letter-spacing:.01em;
+}
+.barra-titulo .reloj{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:12px;
+  color:#a9c7de;
+}
+.cuerpo{
+  padding:14px;
+  display:grid;
+  gap:12px;
+  grid-template-columns:230px minmax(0,1fr) 260px;
+  grid-template-areas:
+    "params scope energia"
+    "params graficas barrido"
+    "dictamen dictamen dictamen";
+}
+#panel-parametros{grid-area:params}
+#panel-scope{grid-area:scope}
+#panel-energia{grid-area:energia}
+#panel-graficas{grid-area:graficas}
+#panel-barrido{grid-area:barrido}
+#panel-dictamen{grid-area:dictamen}
+
+@media (max-width:980px){
+  .cuerpo{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"params" "scope" "energia" "graficas" "barrido" "dictamen";
+  }
+}
+
+.caja{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:12px;
+  background:var(--panel);
+  min-width:0;
+}
+.caja h2{
+  font-size:13px;
+  font-weight:600;
+  margin:0 0 10px;
+  color:var(--navy);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .caja h2{color:#8fc3e8}
+}
+:root[data-theme="dark"] .caja h2{color:#8fc3e8}
+
+/* ============================================================
+   PARÁMETROS
+   ============================================================ */
+.campo{margin-bottom:9px}
+.campo label{
+  display:block;
+  font-size:12px;
+  color:var(--ink-soft);
+  margin-bottom:3px;
+}
+.campo input, .campo select{
+  width:100%;
+  padding:6px 8px;
+  border:1px solid var(--line);
+  border-radius:3px;
+  background:var(--panel);
+  color:var(--ink);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:13px;
+}
+.campo input:focus-visible, .campo select:focus-visible,
+button:focus-visible, input[type=checkbox]:focus-visible{
+  outline:2px solid #2f7fb8;
+  outline-offset:1px;
+}
+.btn{
+  display:block;
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+  border-radius:3px;
+  font-family:inherit;
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  border:1px solid var(--navy);
+}
+.btn-primario{background:var(--navy);color:#fff}
+.btn-primario:hover{background:var(--navy-dark)}
+.btn-secundario{background:transparent;color:var(--navy)}
+:root[data-theme="dark"] .btn-secundario{color:#8fc3e8;border-color:#8fc3e8}
+.btn-secundario:hover{background:rgba(18,57,91,.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.check{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:12px;
+  font-size:13px;
+  color:var(--ink-soft);
+}
+.nota{
+  font-size:11px;
+  color:var(--ink-soft);
+  margin-top:8px;
+  line-height:1.35;
+}
+
+/* ============================================================
+   SCOPE (trayectoria)
+   ============================================================ */
+#panel-scope{
+  position:relative;
+  background:var(--scope);
+  border:1px solid var(--navy-dark);
+  border-radius:var(--radius);
+  padding:0;
+  overflow:hidden;
+  min-height:300px;
+}
+#lienzo{display:block;width:100%;height:100%}
+.scope-pie{
+  position:absolute;
+  left:10px;bottom:8px;
+  color:#8fa9c2;
+  font-size:11px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  pointer-events:none;
+}
+.scope-estado{
+  position:absolute;
+  right:10px;top:8px;
+  color:#cfe3f3;
+  font-size:11px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  background:rgba(10,24,40,.6);
+  padding:3px 7px;
+  border-radius:3px;
+  pointer-events:none;
+}
+
+/* ============================================================
+   ENERGÍA
+   ============================================================ */
+.barra-energia{margin-bottom:10px}
+.barra-energia .etq{
+  display:flex;justify-content:space-between;
+  font-size:12px;color:var(--ink-soft);margin-bottom:3px;
+}
+.barra-energia .val{font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--ink)}
+.pista{height:9px;background:rgba(127,150,170,.18);border-radius:2px;overflow:hidden}
+.relleno{height:100%;width:0;transition:width .18s linear}
+#b-cinetica .relleno{background:#8fc3e8}
+#b-potencial .relleno{background:#d98a80}
+#b-total .relleno{background:#7d8d9c}
+.lectura{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:12px;
+  margin-top:8px;
+  color:var(--navy);
+}
+:root[data-theme="dark"] .lectura{color:#8fc3e8}
+.lectura span{color:var(--ink)}
+
+/* ============================================================
+   GRÁFICAS Y BARRIDO
+   ============================================================ */
+.grafica{width:100%;height:150px;display:block}
+.leyenda-grafica{
+  display:flex;gap:14px;font-size:11px;color:var(--ink-soft);margin-top:4px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+}
+.leyenda-grafica i{display:inline-block;width:10px;height:2px;vertical-align:middle;margin-right:4px}
+#barra-sweep{display:flex;height:22px;border-radius:2px;overflow:hidden;position:relative}
+#barra-sweep div{height:100%}
+#marcador-sweep{
+  position:absolute;top:-3px;width:2px;height:28px;background:var(--ink);
+}
+.leyenda-sweep{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--ink-soft);margin-top:5px;
+}
+
+/* ============================================================
+   DICTAMEN
+   ============================================================ */
+#panel-dictamen{
+  background:var(--amber-bg);
+  border:1px solid var(--amber-line);
+  border-radius:var(--radius);
+  padding:12px 14px;
+}
+#panel-dictamen h2{color:var(--amber-ink);margin-bottom:8px}
+.cifras{
+  display:flex;flex-wrap:wrap;gap:22px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:13px;
+}
+.veredicto{margin-top:9px;font-size:13px;font-weight:600}
+.veredicto.ok{color:#2c7a4b}
+.veredicto.no{color:#b4402f}
+:root[data-theme="dark"] .veredicto.ok{color:#63c98a}
+:root[data-theme="dark"] .veredicto.no{color:#e58474}
+.subnota{margin-top:6px;font-size:12px;color:var(--ink-soft)}
+@media (prefers-reduced-motion: reduce){
+  .relleno{transition:none}
+}
+</style>
+</head>
+<body>
+
+<main class="consola">
+  <header class="barra-titulo">
+    <h1>Consola de Lanzamiento Orbital</h1>
+    <span class="reloj" id="reloj-mision">t = 0.0 s &nbsp;|&nbsp; vueltas: 0</span>
+  </header>
+
+  <div class="cuerpo">
+
+    <!-- ============ PARÁMETROS ============ -->
+    <section class="caja" id="panel-parametros">
+      <h2>Parámetros</h2>
+
+      <div class="campo">
+        <label for="in-M">Masa planeta (M) — 10²⁴ kg</label>
+        <input id="in-M" type="number" step="0.001" value="5.972">
+      </div>
+      <div class="campo">
+        <label for="in-R">Radio planeta (R) — km</label>
+        <input id="in-R" type="number" step="1" value="6371">
+      </div>
+      <div class="campo">
+        <label for="in-h">Altura torre (h) — km</label>
+        <input id="in-h" type="number" step="1" value="300">
+      </div>
+      <div class="campo">
+        <label for="in-v0">Velocidad lanz. (v₀) — km/s</label>
+        <input id="in-v0" type="number" step="0.01" value="7.90">
+      </div>
+      <div class="campo">
+        <label for="in-obj">Órbita objetivo — km sobre superficie</label>
+        <input id="in-obj" type="number" step="10" value="1200">
+      </div>
+
+      <button class="btn btn-primario" id="btn-lanzar">Lanzar</button>
+      <button class="btn btn-secundario" id="btn-circular" disabled>Circularizar en apogeo</button>
+
+      <label class="check">
+        <input type="checkbox" id="in-atmosfera">
+        Atmósfera
+      </label>
+      <div class="campo" style="margin-top:9px">
+        <label for="in-altatm">Altura límite atmósfera — km</label>
+        <input id="in-altatm" type="number" min="0" step="10" value="900" disabled>
+      </div>
+      <div class="campo">
+        <label for="in-cd">Coef. de arrastre (C_d) — adimensional</label>
+        <input id="in-cd" type="number" min="0" step="0.1" value="2.2" disabled>
+      </div>
+
+      <p class="nota">Los valores se recalculan al escribir. El lanzamiento es horizontal desde la cima de la torre.</p>
+    </section>
+
+    <!-- ============ SCOPE ============ -->
+    <section id="panel-scope">
+      <canvas id="lienzo"></canvas>
+      <span class="scope-pie">Trayectoria en tiempo real</span>
+      <span class="scope-estado" id="scope-estado">en espera</span>
+    </section>
+
+    <!-- ============ ENERGÍA ============ -->
+    <section class="caja" id="panel-energia">
+      <h2>Panel de energía</h2>
+
+      <div class="barra-energia" id="b-cinetica">
+        <div class="etq"><span>E. cinética</span><span class="val" id="v-ec">—</span></div>
+        <div class="pista"><div class="relleno"></div></div>
+      </div>
+      <div class="barra-energia" id="b-potencial">
+        <div class="etq"><span>E. potencial</span><span class="val" id="v-ep">—</span></div>
+        <div class="pista"><div class="relleno"></div></div>
+      </div>
+      <div class="barra-energia" id="b-total">
+        <div class="etq"><span>E. total</span><span class="val" id="v-et">—</span></div>
+        <div class="pista"><div class="relleno"></div></div>
+      </div>
+
+      <p class="lectura">Estado: <span id="v-estado">—</span></p>
+      <p class="lectura">v_esc local: <span id="v-esc">—</span></p>
+      <p class="lectura">r actual: <span id="v-r">—</span></p>
+      <p class="nota">Energías por unidad de masa (J/kg). El cero de potencial está en el infinito, por eso E_p &lt; 0.</p>
+    </section>
+
+    <!-- ============ GRÁFICAS ============ -->
+    <section class="caja" id="panel-graficas">
+      <h2>r(t) y v(r)</h2>
+      <canvas class="grafica" id="g-rt"></canvas>
+      <div class="leyenda-grafica">
+        <span><i style="background:#3d7fb0"></i>r(t) — distancia al centro</span>
+        <span><i style="background:#d98a80"></i>v(r) — rapidez vs. distancia</span>
+      </div>
+      <canvas class="grafica" id="g-vr"></canvas>
+    </section>
+
+    <!-- ============ BARRIDO ============ -->
+    <section class="caja" id="panel-barrido">
+      <h2>Mapa de barrido (v₀ → resultado)</h2>
+      <div id="barra-sweep"><div id="marcador-sweep"></div></div>
+      <div class="leyenda-sweep">
+        <span id="sweep-min">—</span>
+        <span id="sweep-max">—</span>
+      </div>
+      <div class="leyenda-grafica" style="margin-top:8px;flex-wrap:wrap;gap:10px">
+        <span><i style="background:var(--c-impacto);height:8px;width:8px"></i>impacto</span>
+        <span><i style="background:var(--c-eliptica);height:8px;width:8px"></i>elíptica</span>
+        <span><i style="background:var(--c-circular);height:8px;width:8px"></i>circular</span>
+        <span><i style="background:var(--c-escape);height:8px;width:8px"></i>escape</span>
+      </div>
+      <p class="nota">La línea vertical marca el v₀ cargado ahora mismo.</p>
+    </section>
+
+    <!-- ============ DICTAMEN ============ -->
+    <section id="panel-dictamen">
+      <h2>Plan de lanzamiento — Dictamen</h2>
+      <div class="cifras">
+        <span>v₀ = <strong id="d-v0">—</strong></span>
+        <span>Δv_circ = <strong id="d-dvc">—</strong></span>
+        <span>Δv_total = <strong id="d-dvt">—</strong></span>
+        <span>apogeo = <strong id="d-apo">—</strong></span>
+      </div>
+      <p class="veredicto" id="d-veredicto">—</p>
+      <p class="subnota" id="d-subnota">Vueltas antes de reentrada (con atmósfera): —</p>
+    </section>
+
+  </div>
+</main>
+
+<script type="module">
+/* ============================================================
+   1. FÍSICA  — viene de la librería (src/physics/), no se copia aquí.
+      La interfaz solo consume funciones puras en unidades SI.
+      Requiere servirse por http(s): GitHub Pages / Vercel / Netlify,
+      o en local:  npx serve   ó   python3 -m http.server
+   ============================================================ */
+import * as physics from './src/physics/index.js';
+
+/* ============================================================
+   2. ESTADO DE LA APLICACIÓN
+   ============================================================ */
+const app = {
+  params: null,
+  state: null,
+  trail: [],
+  serieRT: [],
+  serieVR: [],
+  corriendo: false,
+  pendienteCircularizar: false,
+  circularizado: false,
+  deltaVaplicado: 0,
+  vueltas: 0,
+  anguloAcumulado: 0,
+  impacto: false,
+  escala: 1,
+  dt: 2,
+  pasosPorCuadro: 24
+};
+
+const $ = id => document.getElementById(id);
+
+function leerParametros(){
+  const num = (id, def) => {
+    const v = parseFloat($(id).value);
+    return Number.isFinite(v) ? v : def;
+  };
+  return {
+    M: num('in-M', 5.972) * 1e24,
+    R: num('in-R', 6371) * 1e3,
+    h: num('in-h', 300) * 1e3,
+    v0: num('in-v0', 7.9) * 1e3,
+    rObjetivo: (num('in-R', 6371) + num('in-obj', 1200)) * 1e3,
+    atmosfera: $('in-atmosfera').checked,
+    // arrastre: altura límite y C_d ajustables; el resto es fijo del modelo
+    altAtmosfera: Math.max(0, num('in-altatm', 900)) * 1e3,
+    Cd: Math.max(0, num('in-cd', 2.2)),
+    escalaAltura: 90e3,
+    rho0: 2.5e-9,
+    areaSobreMasa: 0.02
+  };
+}
+
+const km = m => (m/1000);
+const fmt = (x, d=2) => Number.isFinite(x) ? x.toFixed(d) : "—";
+
+/* ============================================================
+   3. RENDER — trayectoria
+   ============================================================ */
+const lienzo = $('lienzo');
+const ctx = lienzo.getContext('2d');
+
+function ajustarLienzo(c){
+  const dpr = window.devicePixelRatio || 1;
+  const r = c.getBoundingClientRect();
+  c.width = Math.max(1, Math.round(r.width * dpr));
+  c.height = Math.max(1, Math.round(r.height * dpr));
+  const g = c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  return { w: r.width, h: r.height, g };
+}
+
+function dibujarScope(){
+  const { w, h, g } = ajustarLienzo(lienzo);
+  const p = app.params;
+  g.clearRect(0,0,w,h);
+
+  const geo = physics.transferGeometry(p);
+  const rMax = Math.max(
+    p.rObjetivo,
+    Number.isFinite(geo.rApo) ? geo.rApo : p.R*4,
+    app.state ? Math.hypot(app.state.x, app.state.y) : p.R
+  ) * 1.15;
+  const escala = Math.min(w, h) / 2 / rMax;
+  app.escala = escala;
+
+  const cx = w/2, cy = h/2;
+  const X = mx => cx + mx*escala;
+  const Y = my => cy - my*escala;
+
+  // atmósfera
+  if(p.atmosfera){
+    const rg = g.createRadialGradient(cx,cy,p.R*escala,cx,cy,(p.R+p.altAtmosfera)*escala);
+    rg.addColorStop(0,'rgba(120,190,230,.35)');
+    rg.addColorStop(1,'rgba(120,190,230,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(cx,cy,(p.R+p.altAtmosfera)*escala,0,Math.PI*2); g.fill();
+  }
+
+  // órbita objetivo
+  g.setLineDash([5,5]);
+  g.strokeStyle = '#4ea36d';
+  g.lineWidth = 1;
+  g.beginPath(); g.arc(cx,cy,p.rObjetivo*escala,0,Math.PI*2); g.stroke();
+
+  // órbita de transferencia prevista
+  if(!geo.escape){
+    const a = geo.a*escala, b = a*Math.sqrt(1-geo.ecc*geo.ecc);
+    const foco = geo.a*geo.ecc*escala;
+    g.setLineDash([4,4]);
+    g.strokeStyle = 'rgba(143,208,239,.65)';
+    g.beginPath();
+    g.ellipse(cx, cy + foco, b, a, 0, 0, Math.PI*2);
+    g.stroke();
+  }
+  g.setLineDash([]);
+
+  // planeta
+  g.fillStyle = '#4e88af';
+  g.beginPath(); g.arc(cx,cy,p.R*escala,0,Math.PI*2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.75)';
+  g.font = '11px "IBM Plex Sans", sans-serif';
+  g.textAlign = 'center';
+  g.fillText('planeta', cx, cy+4);
+
+  // torre y punto de lanzamiento
+  g.strokeStyle = '#9fb6c9';
+  g.lineWidth = 2;
+  g.beginPath(); g.moveTo(cx, Y(p.R)); g.lineTo(cx, Y(p.R+p.h)); g.stroke();
+  g.fillStyle = '#d04a3b';
+  g.beginPath(); g.arc(cx, Y(p.R+p.h), 3.5, 0, Math.PI*2); g.fill();
+
+  // estela
+  if(app.trail.length > 1){
+    g.strokeStyle = '#8fd0ef';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(X(app.trail[0].x), Y(app.trail[0].y));
+    for(let i=1;i<app.trail.length;i++) g.lineTo(X(app.trail[i].x), Y(app.trail[i].y));
+    g.stroke();
+  }
+
+  // proyectil
+  if(app.state){
+    g.fillStyle = app.impacto ? '#d04a3b' : '#ffd166';
+    g.beginPath(); g.arc(X(app.state.x), Y(app.state.y), 4, 0, Math.PI*2); g.fill();
+  }
+}
+
+/* ============================================================
+   4. RENDER — gráficas
+   ============================================================ */
+function dibujarSerie(canvas, datos, color, ej){
+  // ej = { x:'t', xU:'s', y:'r', yU:'km', xDec, yDec }  → título "t [s]" y "r [km]"
+  const { w, h, g } = ajustarLienzo(canvas);
+  g.clearRect(0,0,w,h);
+  const pad = {l:52, r:10, t:10, b:34};
+  const plotW = w-pad.l-pad.r, plotH = h-pad.t-pad.b;
+  const tinta = 'rgba(127,150,170,.95)';
+  const rejilla = 'rgba(127,150,170,.22)';
+
+  g.fillStyle = tinta;
+  g.font = '10px "IBM Plex Mono", monospace';
+
+  // títulos de ejes (con unidades)
+  g.textAlign = 'center';
+  g.fillText(`${ej.x} [${ej.xU}]`, pad.l + plotW/2, h-3);
+  g.save();
+  g.translate(10, pad.t + plotH/2); g.rotate(-Math.PI/2);
+  g.fillText(`${ej.y} [${ej.yU}]`, 0, 0);
+  g.restore();
+
+  // ejes
+  g.strokeStyle = tinta; g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(pad.l, pad.t); g.lineTo(pad.l, h-pad.b); g.lineTo(w-pad.r, h-pad.b);
+  g.stroke();
+
+  if(datos.length < 2){
+    g.fillStyle = tinta;
+    g.textAlign = 'center';
+    g.fillText('sin datos — pulsa Lanzar', pad.l + plotW/2, pad.t + plotH/2);
+    return;
+  }
+
+  const xs = datos.map(d=>d[0]), ys = datos.map(d=>d[1]);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs);
+  let y0 = Math.min(...ys), y1 = Math.max(...ys);
+  if(x1 - x0 === 0){ x1 = x0 + 1; }
+  if(y1 - y0 === 0){ const m = Math.abs(y0)*0.01 || 1; y0 -= m; y1 += m; }
+  const sx = v => pad.l + plotW * ((v-x0)/(x1-x0));
+  const sy = v => (h-pad.b) - plotH * ((v-y0)/(y1-y0));
+
+  // marcas y rejilla: 3 en cada eje (mín, medio, máx)
+  for(let k=0;k<=2;k++){
+    const fx = x0 + (x1-x0)*k/2, fy = y0 + (y1-y0)*k/2;
+    g.strokeStyle = rejilla;
+    g.beginPath();
+    g.moveTo(sx(fx), pad.t); g.lineTo(sx(fx), h-pad.b);
+    g.moveTo(pad.l, sy(fy)); g.lineTo(w-pad.r, sy(fy));
+    g.stroke();
+    g.fillStyle = tinta;
+    g.textAlign = k===0 ? 'left' : k===2 ? 'right' : 'center';
+    g.fillText(fx.toFixed(ej.xDec), sx(fx), h-pad.b+12);
+    g.textAlign = 'right';
+    g.fillText(fy.toFixed(ej.yDec), pad.l-4, sy(fy)+3);
+  }
+
+  // serie
+  g.strokeStyle = color;
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(sx(datos[0][0]), sy(datos[0][1]));
+  for(let i=1;i<datos.length;i++) g.lineTo(sx(datos[i][0]), sy(datos[i][1]));
+  g.stroke();
+}
+
+function dibujarGraficas(){
+  dibujarSerie($('g-rt'), app.serieRT, '#3d7fb0',
+    { x:'t', xU:'s',  y:'r', yU:'km',   xDec:0, yDec:0 });
+  dibujarSerie($('g-vr'), app.serieVR, '#d98a80',
+    { x:'r', xU:'km', y:'v', yU:'km/s', xDec:0, yDec:2 });
+}
+
+/* ============================================================
+   5. RENDER — mapa de barrido
+   ============================================================ */
+const COLOR = {
+  impacto:'var(--c-impacto)', eliptica:'var(--c-eliptica)',
+  circular:'var(--c-circular)', escape:'var(--c-escape)'
+};
+
+function dibujarBarrido(){
+  const p = app.params;
+  const vCirc = physics.circularVelocity(p.M, p.R + p.h);
+  const vMin = vCirc*0.6, vMax = physics.escapeVelocity(p.M, p.R+p.h)*1.1;
+  const muestras = physics.sweepLaunchVelocities(p, vMin, vMax, 140);
+
+  const barra = $('barra-sweep');
+  barra.querySelectorAll('div:not(#marcador-sweep)').forEach(n=>n.remove());
+  let i = 0;
+  while(i < muestras.length){
+    let j = i;
+    while(j+1 < muestras.length && muestras[j+1].outcome === muestras[i].outcome) j++;
+    const seg = document.createElement('div');
+    seg.style.background = COLOR[muestras[i].outcome];
+    seg.style.flex = String(j-i+1);
+    seg.title = muestras[i].outcome;
+    barra.appendChild(seg);
+    i = j+1;
+  }
+
+  const frac = Math.min(1, Math.max(0, (p.v0 - vMin)/(vMax - vMin)));
+  $('marcador-sweep').style.left = (frac*100) + '%';
+  $('sweep-min').textContent = fmt(km(vMin)) + ' km/s';
+  $('sweep-max').textContent = fmt(km(vMax)) + ' km/s';
+}
+
+/* ============================================================
+   6. RENDER — energía y dictamen
+   ============================================================ */
+function actualizarEnergia(){
+  const p = app.params;
+  const s = app.state || physics.createInitialState(p);
+  const e = physics.computeEnergy(s, p.M);
+  const ref = physics.G*p.M/(p.R);                // escala de normalización
+
+  const set = (id, valor, texto) => {
+    $(id).querySelector('.relleno').style.width =
+      Math.min(100, Math.abs(valor)/ref*100) + '%';
+  };
+  set('b-cinetica', e.kinetic);
+  set('b-potencial', e.potential);
+  set('b-total', e.total);
+
+  const MJ = x => (x/1e6).toFixed(1) + ' MJ/kg';
+  $('v-ec').textContent = MJ(e.kinetic);
+  $('v-ep').textContent = MJ(e.potential);
+  $('v-et').textContent = MJ(e.total);
+  $('v-estado').textContent = app.impacto ? 'impacto en superficie'
+    : e.total < 0 ? 'ligada (E<0)' : 'no ligada (E≥0)';
+  $('v-esc').textContent = fmt(km(physics.escapeVelocity(p.M, e.r))) + ' km/s';
+  $('v-r').textContent = fmt(km(e.r), 0) + ' km  ·  v = ' + fmt(km(e.v)) + ' km/s';
+}
+
+function actualizarDictamen(){
+  const p = app.params;
+  const res = physics.circularizationDeltaV(p);
+  const geo = res.geo;
+
+  $('d-v0').textContent = fmt(km(p.v0)) + ' km/s';
+
+  if(geo.escape){
+    $('d-dvc').textContent = 'n/a';
+    $('d-dvt').textContent = 'n/a';
+    $('d-apo').textContent = '∞';
+    $('d-veredicto').className = 'veredicto no';
+    $('d-veredicto').textContent = '✕ Trayectoria de escape: no hay órbita que circularizar.';
+  } else {
+    const dv = app.circularizado ? app.deltaVaplicado : res.deltaV;
+    $('d-dvc').textContent = fmt(km(dv)) + ' km/s';
+    $('d-dvt').textContent = fmt(km(p.v0 + dv)) + ' km/s';
+    $('d-apo').textContent = fmt(km(geo.rApo - p.R), 0) + ' km';
+
+    const err = Math.abs(geo.rApo - p.rObjetivo) / p.rObjetivo;
+    const conforme = geo.rPeri > p.R && err <= 0.02;
+    $('d-veredicto').className = 'veredicto ' + (conforme ? 'ok' : 'no');
+    $('d-veredicto').textContent = geo.rPeri <= p.R
+      ? '✕ La trayectoria corta la superficie: impacto antes de completar una vuelta.'
+      : conforme
+        ? '✔ Órbita conforme (dentro de ±2% de la altura objetivo)'
+        : `✕ Fuera de especificación: el apogeo se desvía ${(err*100).toFixed(1)}% de la altura objetivo.`;
+  }
+
+  $('d-subnota').textContent = p.atmosfera
+    ? `Vueltas antes de reentrada (con atmósfera): ${app.vueltas} y contando — estimación provisional.`
+    : 'Vueltas antes de reentrada (con atmósfera): atmósfera desactivada.';
+}
+
+/* ============================================================
+   7. SIMULACIÓN
+   ============================================================ */
+function recalcularPrevisualizacion(){
+  app.params = leerParametros();
+  if(!app.corriendo){
+    app.state = null;
+    app.trail = [];
+  }
+  dibujarScope();
+  dibujarBarrido();
+  actualizarEnergia();
+  actualizarDictamen();
+}
+
+function lanzar(){
+  app.params = leerParametros();
+  app.state = physics.createInitialState(app.params);
+  app.trail = [{x:app.state.x, y:app.state.y}];
+  app.serieRT = [];
+  app.serieVR = [];
+  app.vueltas = 0;
+  app.anguloAcumulado = 0;
+  app.impacto = false;
+  app.circularizado = false;
+  app.pendienteCircularizar = false;
+  app.deltaVaplicado = 0;
+  app.corriendo = true;
+
+  const geo = physics.transferGeometry(app.params);
+  app.dt = Number.isFinite(geo.a) ? Math.max(0.5, geo.a/2e6) : 3;
+
+  $('btn-circular').disabled = false;
+  $('btn-lanzar').textContent = 'Reiniciar lanzamiento';
+  $('scope-estado').textContent = 'en vuelo';
+}
+
+function detener(motivo){
+  app.corriendo = false;
+  $('scope-estado').textContent = motivo;
+  $('btn-circular').disabled = true;
+}
+
+function avanzar(){
+  const p = app.params;
+  let anterior = app.state;
+
+  for(let i=0;i<app.pasosPorCuadro;i++){
+    const previo = app.state;
+    const rPrev = Math.hypot(previo.x, previo.y);
+    const vrPrev = (previo.x*previo.vx + previo.y*previo.vy)/rPrev;
+
+    app.state = physics.step(app.state, p, app.dt);
+
+    let s = app.state;
+    const r = Math.hypot(s.x, s.y);
+    const vr = (s.x*s.vx + s.y*s.vy)/r;
+
+    // apogeo: la velocidad radial cruza de + a −
+    if(app.pendienteCircularizar && vrPrev > 0 && vr <= 0){
+      const res = physics.applyCircularization(s, p.M);
+      app.state = s = res.newState;
+      app.deltaVaplicado = res.deltaV;
+      app.pendienteCircularizar = false;
+      app.circularizado = true;
+      $('scope-estado').textContent = 'circularizada en apogeo';
+      $('btn-circular').disabled = true;
+      actualizarDictamen();
+    }
+
+    // conteo de vueltas
+    const a1 = Math.atan2(previo.y, previo.x), a2 = Math.atan2(s.y, s.x);
+    let d = a2 - a1;
+    if(d > Math.PI) d -= 2*Math.PI;
+    if(d < -Math.PI) d += 2*Math.PI;
+    app.anguloAcumulado += d;
+    app.vueltas = Math.floor(Math.abs(app.anguloAcumulado)/(2*Math.PI));
+
+    if(r <= p.R){
+      app.impacto = true;
+      detener('impacto en superficie');
+      break;
+    }
+    if(r > (p.R + p.h) * 60){
+      detener('fuera de alcance — escape');
+      break;
+    }
+  }
+
+  const e = physics.computeEnergy(app.state, p.M);
+  app.trail.push({x:app.state.x, y:app.state.y});
+  if(app.trail.length > 2600) app.trail.shift();
+  app.serieRT.push([app.state.t, km(e.r)]);
+  if(app.serieRT.length > 900) app.serieRT.shift();
+  app.serieVR.push([km(e.r), km(e.v)]);
+  if(app.serieVR.length > 900) app.serieVR.shift();
+
+  $('reloj-mision').textContent =
+    `t = ${app.state.t.toFixed(0)} s  |  vueltas: ${app.vueltas}`;
+}
+
+function bucle(){
+  if(app.corriendo && app.state){
+    avanzar();
+    actualizarEnergia();
+  }
+  dibujarScope();
+  dibujarGraficas();
+  requestAnimationFrame(bucle);
+}
+
+/* ============================================================
+   8. EVENTOS
+   ============================================================ */
+['in-M','in-R','in-h','in-v0','in-obj','in-altatm','in-cd'].forEach(id=>{
+  $(id).addEventListener('input', ()=>{
+    app.corriendo = false;
+    $('btn-lanzar').textContent = 'Lanzar';
+    $('btn-circular').disabled = true;
+    $('scope-estado').textContent = 'en espera';
+    recalcularPrevisualizacion();
+  });
+});
+
+$('in-atmosfera').addEventListener('change', ()=>{
+  $('in-altatm').disabled = $('in-cd').disabled = !$('in-atmosfera').checked;
+  app.params = leerParametros();
+  actualizarDictamen();
+  dibujarScope();
+});
+
+$('btn-lanzar').addEventListener('click', ()=>{
+  lanzar();
+  actualizarEnergia();
+  actualizarDictamen();
+});
+
+$('btn-circular').addEventListener('click', ()=>{
+  if(!app.corriendo) return;
+  app.pendienteCircularizar = true;
+  $('scope-estado').textContent = 'esperando apogeo…';
+});
+
+window.addEventListener('resize', ()=>{ dibujarScope(); dibujarGraficas(); });
+
+recalcularPrevisualizacion();
+dibujarGraficas();
+requestAnimationFrame(bucle);
+</script>
+<div id="aviso-file" hidden style="position:fixed;inset:auto 12px 12px 12px;padding:10px 14px;background:#fffbea;border:1px solid #d9b23c;color:#8a6a10;font:13px 'IBM Plex Sans',sans-serif;border-radius:4px;z-index:9">
+  Esta página importa <code>src/physics/</code> como módulo y no carga con doble clic (file://). Sírvela por http: <code>npx serve</code> o <code>python3 -m http.server</code>.
+</div>
+<script>if(location.protocol==='file:') document.getElementById('aviso-file').hidden=false;</script>
+</body>
+</html>
